@@ -12,6 +12,7 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import ScrollSection from "@/components/ScrollSection";
+import ChatbotWidget from "@/components/ChatbotWidget";
 
 const Index = () => (
   <div className="min-h-screen pt-[30px]">
@@ -48,6 +49,7 @@ const Index = () => (
       </ScrollSection>
       <Footer />
     </div>
+    <ChatbotWidget />
   </div>
 );
 

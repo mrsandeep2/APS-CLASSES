@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Cropper, { Area } from "react-easy-crop";
-import { Trash2, Upload, LogIn, LogOut, ImagePlus, Megaphone, Plus, X, Crop, Trophy, Film, Edit2, Eye, EyeOff, ZoomIn, House, Users, Award, Phone } from "lucide-react";
+import { Trash2, Upload, LogIn, LogOut, ImagePlus, Megaphone, Plus, X, Crop, Trophy, Film, Edit2, Eye, EyeOff, ZoomIn, House, Users, Award, Phone, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const categories = ["Test", "Cultural", "Academics", "Events"];
@@ -253,10 +253,18 @@ const AdminGallery = () => {
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropMode, setCropMode] = useState<"gallery" | "hero" | "result" | "team">("gallery");
   const [tab, setTab] = useState<"gallery" | "notices" | "results" | "team" | "hero">("gallery");
+  const [editingGalleryItem, setEditingGalleryItem] = useState<GalleryImage | null>(null);
+  const [galleryEditTitle, setGalleryEditTitle] = useState("");
+  const [galleryEditCategory, setGalleryEditCategory] = useState(categories[0]);
+  const [pendingGalleryImageReplace, setPendingGalleryImageReplace] = useState<GalleryImage | null>(null);
+  const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
+  const [editingNoticeText, setEditingNoticeText] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const multiHeroFileInputRef = useRef<HTMLInputElement>(null);
+  const galleryReplaceInputRef = useRef<HTMLInputElement>(null);
   const resultPhotoInputRef = useRef<HTMLInputElement>(null);
+  const editResultPhotoInputRef = useRef<HTMLInputElement>(null);
   const teamPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const [heroEditingId, setHeroEditingId] = useState<string | null>(null);
@@ -278,6 +286,14 @@ const AdminGallery = () => {
   const [rYear, setRYear] = useState("2024-25");
   const [rPhotoBlob, setRPhotoBlob] = useState<Blob | null>(null);
   const [rPhotoPreview, setRPhotoPreview] = useState<string>("");
+  const [resultPhotoTarget, setResultPhotoTarget] = useState<"add" | "edit">("add");
+  const [editingResultId, setEditingResultId] = useState<string | null>(null);
+  const [editResultName, setEditResultName] = useState("");
+  const [editResultClass, setEditResultClass] = useState("Class 10th");
+  const [editResultMarks, setEditResultMarks] = useState("");
+  const [editResultYear, setEditResultYear] = useState("2024-25");
+  const [editResultPhotoBlob, setEditResultPhotoBlob] = useState<Blob | null>(null);
+  const [editResultPhotoPreview, setEditResultPhotoPreview] = useState("");
 
   const [teamFormData, setTeamFormData] = useState({
     name: "Munna Sir",
@@ -354,7 +370,7 @@ const AdminGallery = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (images.length >= 12) {
+    if (!pendingGalleryImageReplace && images.length >= 12) {
       toast.error("Maximum 12 images allowed. Delete some to add more.");
       return;
     }
@@ -379,20 +395,79 @@ const AdminGallery = () => {
     }
 
     const { data: urlData } = supabase.storage.from("gallery").getPublicUrl(path);
-    const { error: dbError } = await (supabase as any).from("gallery_images").insert({
-      image_url: urlData.publicUrl,
-      category: selectedCategory,
-      title: title || null,
-    });
+    if (pendingGalleryImageReplace) {
+      const { error: updateError } = await (supabase as any)
+        .from("gallery_images")
+        .update({ image_url: urlData.publicUrl })
+        .eq("id", pendingGalleryImageReplace.id);
 
-    if (dbError) {
-      toast.error("Failed to save: " + dbError.message);
+      if (updateError) {
+        toast.error("Failed to replace image: " + updateError.message);
+      } else {
+        const oldFileName = pendingGalleryImageReplace.image_url.split("/").pop();
+        if (oldFileName) {
+          await supabase.storage.from("gallery").remove([oldFileName]);
+        }
+        toast.success("Gallery image replaced");
+        setPendingGalleryImageReplace(null);
+        fetchImages();
+      }
     } else {
-      toast.success("Image uploaded");
-      setTitle("");
-      fetchImages();
+      const { error: dbError } = await (supabase as any).from("gallery_images").insert({
+        image_url: urlData.publicUrl,
+        category: selectedCategory,
+        title: title || null,
+      });
+
+      if (dbError) {
+        toast.error("Failed to save: " + dbError.message);
+      } else {
+        toast.success("Image uploaded");
+        setTitle("");
+        fetchImages();
+      }
     }
+
     setUploading(false);
+  };
+
+  const startEditGalleryItem = (img: GalleryImage) => {
+    setEditingGalleryItem(img);
+    setGalleryEditTitle(img.title || "");
+    setGalleryEditCategory(img.category || categories[0]);
+  };
+
+  const cancelEditGalleryItem = () => {
+    setEditingGalleryItem(null);
+    setGalleryEditTitle("");
+    setGalleryEditCategory(categories[0]);
+  };
+
+  const handleSaveGalleryEdit = async () => {
+    if (!editingGalleryItem) return;
+
+    const { error } = await (supabase as any)
+      .from("gallery_images")
+      .update({
+        title: galleryEditTitle.trim() || null,
+        category: galleryEditCategory,
+      })
+      .eq("id", editingGalleryItem.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Gallery details updated");
+    cancelEditGalleryItem();
+    fetchImages();
+  };
+
+  const handleReplaceGalleryImageSelect = (img: GalleryImage) => {
+    setPendingGalleryImageReplace(img);
+    setCropMode("gallery");
+    galleryReplaceInputRef.current?.click();
   };
 
   const handleDelete = async (img: GalleryImage) => {
@@ -422,6 +497,37 @@ const AdminGallery = () => {
   const handleDeleteNotice = async (id: string) => {
     await (supabase as any).from("notices").delete().eq("id", id);
     toast.success("Notice deleted");
+    fetchNotices();
+  };
+
+  const startEditNotice = (notice: Notice) => {
+    setEditingNoticeId(notice.id);
+    setEditingNoticeText(notice.text);
+  };
+
+  const cancelEditNotice = () => {
+    setEditingNoticeId(null);
+    setEditingNoticeText("");
+  };
+
+  const handleSaveNoticeEdit = async () => {
+    if (!editingNoticeId || !editingNoticeText.trim()) {
+      toast.error("Notice text is required");
+      return;
+    }
+
+    const { error } = await (supabase as any)
+      .from("notices")
+      .update({ text: editingNoticeText.trim() })
+      .eq("id", editingNoticeId);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Notice updated");
+    cancelEditNotice();
     fetchNotices();
   };
 
@@ -509,15 +615,127 @@ const AdminGallery = () => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setResultPhotoTarget("add");
+    setCropMode("result");
+    setCropFile(file);
+  };
+
+  const handleEditResultPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setResultPhotoTarget("edit");
     setCropMode("result");
     setCropFile(file);
   };
 
   const handleResultCropUpload = (blob: Blob) => {
     setCropFile(null);
+
+    if (resultPhotoTarget === "edit") {
+      setEditResultPhotoBlob(blob);
+      setEditResultPhotoPreview(URL.createObjectURL(blob));
+      toast.success("Updated student photo cropped");
+      return;
+    }
+
     setRPhotoBlob(blob);
     setRPhotoPreview(URL.createObjectURL(blob));
     toast.success("Student photo cropped");
+  };
+
+  const startEditResult = (result: StudentResult) => {
+    setEditingResultId(result.id);
+    setEditResultName(result.student_name);
+    setEditResultClass(result.student_class);
+    setEditResultMarks(String(result.marks_obtained));
+    setEditResultYear(result.year);
+    setEditResultPhotoBlob(null);
+    setEditResultPhotoPreview(result.photo_url || "");
+  };
+
+  const cancelEditResult = () => {
+    setEditingResultId(null);
+    setEditResultName("");
+    setEditResultClass("Class 10th");
+    setEditResultMarks("");
+    setEditResultYear("2024-25");
+    setEditResultPhotoBlob(null);
+    setEditResultPhotoPreview("");
+  };
+
+  const handleSaveResultEdit = async (result: StudentResult) => {
+    if (!editingResultId || !editResultName.trim()) {
+      toast.error("Student name is required");
+      return;
+    }
+
+    const obtainedMarks = Number(editResultMarks);
+    if (!Number.isFinite(obtainedMarks)) {
+      toast.error("Please enter valid obtained marks");
+      return;
+    }
+
+    if (obtainedMarks < 0 || obtainedMarks > TOTAL_RESULT_MARKS) {
+      toast.error(`Obtained marks must be between 0 and ${TOTAL_RESULT_MARKS}`);
+      return;
+    }
+
+    setUploading(true);
+
+    const percentage = Number(((obtainedMarks / TOTAL_RESULT_MARKS) * 100).toFixed(2));
+    const grade = getGradeFromPercentage(percentage);
+    let photoUrl = result.photo_url;
+
+    if (editResultPhotoBlob) {
+      const ext = editResultPhotoBlob.type === "image/png" ? "png" : "jpg";
+      const path = `result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage.from("student-results").upload(path, editResultPhotoBlob, {
+        contentType: editResultPhotoBlob.type || "image/jpeg",
+      });
+
+      if (uploadError) {
+        toast.error("Photo upload failed: " + uploadError.message);
+        setUploading(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from("student-results").getPublicUrl(path);
+      photoUrl = urlData.publicUrl;
+
+      if (result.photo_url && result.photo_url.includes("/student-results/")) {
+        const oldFilePath = result.photo_url.split("/student-results/")[1];
+        if (oldFilePath) {
+          await supabase.storage.from("student-results").remove([decodeURIComponent(oldFilePath)]);
+        }
+      }
+    }
+
+    const { error } = await (supabase as any)
+      .from("student_results")
+      .update({
+        student_name: editResultName.trim(),
+        student_class: editResultClass,
+        marks_obtained: obtainedMarks,
+        total_marks: TOTAL_RESULT_MARKS,
+        percentage,
+        grade,
+        year: editResultYear,
+        photo_url: photoUrl,
+      })
+      .eq("id", editingResultId);
+
+    setUploading(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Result updated");
+    cancelEditResult();
+    fetchResults();
   };
 
   const handleTeamImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -882,7 +1100,10 @@ const AdminGallery = () => {
               ? handleTeamCropUpload
               : handleCropUpload
           }
-          onCancel={() => setCropFile(null)}
+          onCancel={() => {
+            setCropFile(null);
+            setPendingGalleryImageReplace(null);
+          }}
         />
       )}
 
@@ -950,11 +1171,51 @@ const AdminGallery = () => {
               </div>
             </div>
 
+            <input ref={galleryReplaceInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+
+            {editingGalleryItem && (
+              <div className="bg-card border border-border rounded-2xl p-4 mb-4 space-y-3">
+                <h3 className="text-sm font-semibold">Edit Gallery Item</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    placeholder="Image title"
+                    value={galleryEditTitle}
+                    onChange={(e) => setGalleryEditTitle(e.target.value)}
+                  />
+                  <select
+                    value={galleryEditCategory}
+                    onChange={(e) => setGalleryEditCategory(e.target.value)}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" onClick={handleSaveGalleryEdit}>
+                    <Check className="w-4 h-4 mr-1" /> Save
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleReplaceGalleryImageSelect(editingGalleryItem)}>
+                    <Upload className="w-4 h-4 mr-1" /> Replace Image
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={cancelEditGalleryItem}>
+                    <X className="w-4 h-4 mr-1" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {images.map((img) => (
                 <div key={img.id} className="relative group rounded-xl overflow-hidden border border-border">
                   <img src={img.image_url} alt={img.title || ""} className="w-full aspect-square object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => startEditGalleryItem(img)}>
+                      <Edit2 className="w-4 h-4 mr-1" /> Edit
+                    </Button>
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(img)}>
                       <Trash2 className="w-4 h-4 mr-1" /> Delete
                     </Button>
@@ -989,8 +1250,26 @@ const AdminGallery = () => {
               {notices.map((notice) => (
                 <div key={notice.id} className="flex items-center gap-3 bg-card border border-border rounded-xl p-4">
                   <div className="flex-1">
-                    <p className={`text-sm ${notice.is_active ? "text-foreground" : "text-muted-foreground line-through"}`}>{notice.text}</p>
+                    {editingNoticeId === notice.id ? (
+                      <Input value={editingNoticeText} onChange={(e) => setEditingNoticeText(e.target.value)} />
+                    ) : (
+                      <p className={`text-sm ${notice.is_active ? "text-foreground" : "text-muted-foreground line-through"}`}>{notice.text}</p>
+                    )}
                   </div>
+                  {editingNoticeId === notice.id ? (
+                    <>
+                      <Button variant="outline" size="sm" onClick={handleSaveNoticeEdit}>
+                        <Check className="w-4 h-4 mr-1" /> Save
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={cancelEditNotice}>
+                        <X className="w-4 h-4 mr-1" /> Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => startEditNotice(notice)}>
+                      <Edit2 className="w-4 h-4 mr-1" /> Edit
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => handleToggleNotice(notice)}>
                     {notice.is_active ? "Hide" : "Show"}
                   </Button>
@@ -1092,15 +1371,87 @@ const AdminGallery = () => {
             <div className="space-y-2">
               {results.map((result) => (
                 <div key={result.id} className="flex items-center gap-3 bg-card border border-border rounded-xl p-4">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{result.student_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {result.student_class} • {result.year} • {result.percentage}% • Grade {result.grade}
-                    </p>
-                  </div>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteResult(result)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {editingResultId === result.id ? (
+                    <div className="flex-1 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        <Input value={editResultName} onChange={(e) => setEditResultName(e.target.value)} placeholder="Student name" />
+                        <select
+                          value={editResultClass}
+                          onChange={(e) => setEditResultClass(e.target.value)}
+                          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          {["Class 5th", "Class 6th", "Class 7th", "Class 8th", "Class 9th", "Class 10th", "Class 11th", "Class 12th"].map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={TOTAL_RESULT_MARKS}
+                          value={editResultMarks}
+                          onChange={(e) => setEditResultMarks(e.target.value)}
+                          placeholder="Obtained marks"
+                        />
+                        <select
+                          value={editResultYear}
+                          onChange={(e) => setEditResultYear(e.target.value)}
+                          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          {["2024-25", "2023-24", "2022-23", "2021-22", "2020-21"].map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {editResultPhotoPreview ? (
+                          <img src={editResultPhotoPreview} alt="Student preview" className="w-10 h-10 rounded-full object-cover border border-border" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full border border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground">
+                            Photo
+                          </div>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => editResultPhotoInputRef.current?.click()}>
+                          <Upload className="w-4 h-4 mr-1" /> Change Photo
+                        </Button>
+                        <input
+                          ref={editResultPhotoInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleEditResultPhotoSelect}
+                          className="hidden"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button size="sm" onClick={() => handleSaveResultEdit(result)} disabled={uploading}>
+                          <Check className="w-4 h-4 mr-1" /> Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelEditResult}>
+                          <X className="w-4 h-4 mr-1" /> Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{result.student_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {result.student_class} • {result.year} • {result.percentage}% • Grade {result.grade}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => startEditResult(result)}>
+                        <Edit2 className="w-4 h-4 mr-1" /> Edit
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteResult(result)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               ))}
               {results.length === 0 && <p className="text-center text-muted-foreground py-8">No results yet.</p>}

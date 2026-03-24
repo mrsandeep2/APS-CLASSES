@@ -35,16 +35,21 @@ function AnimatedNumber({ target, trigger }: { target: number; trigger: number }
 
 const StatsSection = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const hasBeenOutOfView = useRef(true);
   const [scrollTrigger, setScrollTrigger] = useState(0);
   const [clickTriggers, setClickTriggers] = useState([0, 0, 0, 0]);
 
-  // Auto-count on scroll into view
+  // Restart counting each time this section enters viewport again.
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setScrollTrigger((p) => p + 1);
-          observer.disconnect();
+          if (hasBeenOutOfView.current) {
+            setScrollTrigger((p) => p + 1);
+            hasBeenOutOfView.current = false;
+          }
+        } else {
+          hasBeenOutOfView.current = true;
         }
       },
       { threshold: 0.2 }
