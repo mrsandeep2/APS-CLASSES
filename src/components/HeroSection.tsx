@@ -32,6 +32,19 @@ const defaultSlides: HeroBannerSlide[] = [
   },
 ];
 
+const normalizeHeroImageUrl = (url: string) => {
+  if (!url) return url;
+
+  // Convert legacy absolute local URLs to deployment-safe path URLs.
+  const marker = "/hero-import/";
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex >= 0) {
+    return url.slice(markerIndex);
+  }
+
+  return url;
+};
+
 const HeroSection = () => {
   const [slides, setSlides] = useState<HeroBannerSlide[]>(defaultSlides);
   const [current, setCurrent] = useState(0);
@@ -55,7 +68,7 @@ const HeroSection = () => {
           // Convert database banners to slide format
           const dbSlides = data.map((banner) => ({
             id: banner.id,
-            image: banner.image_url,
+            image: normalizeHeroImageUrl(banner.image_url),
           }));
           setSlides(dbSlides);
         } else {

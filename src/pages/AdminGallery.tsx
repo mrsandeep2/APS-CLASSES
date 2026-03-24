@@ -662,17 +662,15 @@ const AdminGallery = () => {
           .filter((url) => url.includes("/hero-import/APS-BANNER-")),
       );
 
-      const baseUrl = window.location.origin;
       let inserted = 0;
 
       for (const relativePath of providedHeroBannerPaths) {
-        const fullUrl = `${baseUrl}${relativePath}`;
-        if (alreadyPresent.has(fullUrl)) continue;
+        if (alreadyPresent.has(relativePath)) continue;
 
         const { error } = await (supabase as any).from("hero_banners").insert({
           title: "APS Coaching Classes",
           subtitle: null,
-          image_url: fullUrl,
+          image_url: relativePath,
           cta_label: "Enroll Now",
           cta_link: "/admission",
           cta_secondary_label: "Contact",
