@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -13,6 +13,7 @@ import ContactPage from "./pages/ContactPage";
 import NotFound from "./pages/NotFound";
 import AdminGallery from "./pages/AdminGallery";
 import AdminLogin from "./pages/AdminLogin";
+import GlobalPreloader from "./components/GlobalPreloader";
 
 const queryClient = new QueryClient();
 
@@ -42,17 +43,33 @@ function AnimatedRoutes() {
   );
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ScrollToTop />
-        <AnimatedRoutes />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [showPreloader, setShowPreloader] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowPreloader(false);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (showPreloader) {
+    return <GlobalPreloader />;
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ScrollToTop />
+          <AnimatedRoutes />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

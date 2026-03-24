@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,11 +44,23 @@ const normalizeHeroImageUrl = (url: string) => {
   return url;
 };
 
+const preloadImages = (images: string[]) => {
+  images.forEach((src) => {
+    if (!src) return;
+    const img = new Image();
+    img.src = src;
+  });
+};
+
 const HeroSection = () => {
   const [slides, setSlides] = useState<HeroBannerSlide[]>(defaultSlides);
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Warm up local banner assets for faster first paint on refresh/navigation.
+    preloadImages(defaultSlides.map((slide) => slide.image));
+  }, []);
 
   // Fetch hero banners from database
   useEffect(() => {
@@ -64,22 +75,27 @@ const HeroSection = () => {
         if (error) {
           console.error("Failed to fetch hero banners:", error);
           setSlides(defaultSlides);
+          setCurrent(0);
         } else if (data && data.length > 0) {
           // Convert database banners to slide format
           const dbSlides = data.map((banner) => ({
             id: banner.id,
             image: normalizeHeroImageUrl(banner.image_url),
           }));
+
+          // Preload remote images before swap to avoid flash/loading feel.
+          preloadImages(dbSlides.map((slide) => slide.image));
           setSlides(dbSlides);
+          setCurrent(0);
         } else {
           // Fallback to default slides if no active banners in database
           setSlides(defaultSlides);
+          setCurrent(0);
         }
       } catch (err) {
         console.error("Error loading hero banners:", err);
         setSlides(defaultSlides);
-      } finally {
-        setLoading(false);
+        setCurrent(0);
       }
     };
 
@@ -91,18 +107,13 @@ const HeroSection = () => {
     setCurrent((prev) => (prev + 1) % slides.length);
   }, [slides.length]);
 
-  const prev = useCallback(() => {
-    setDirection(-1);
-    setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
-  }, [slides.length]);
-
   useEffect(() => {
     if (slides.length === 0) return;
     const timer = setInterval(next, 4000);
     return () => clearInterval(timer);
   }, [next, slides.length]);
 
-  if (loading || slides.length === 0) {
+  if (slides.length === 0) {
     return (
       <section className="relative w-full aspect-[16/9] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
         <div className="text-center">
@@ -143,22 +154,6 @@ const HeroSection = () => {
           />
         </motion.div>
       </AnimatePresence>
-
-      <button
-        onClick={prev}
-        aria-label="Previous slide"
-        className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/35 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-black/55 active:scale-95 transition-all"
-      >
-        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-      </button>
-
-      <button
-        onClick={next}
-        aria-label="Next slide"
-        className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/35 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-black/55 active:scale-95 transition-all"
-      >
-        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-      </button>
     </section>
   );
 };
