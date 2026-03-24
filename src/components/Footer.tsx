@@ -48,11 +48,14 @@ const Footer = () => (
             </li>
             <li className="flex gap-2 items-center">
               <Phone className="w-4 h-4 shrink-0 text-secondary" />
-              <a href="tel:7070422574" className="hover:text-secondary transition-colors">7070422574</a>
+              <div className="flex flex-col gap-1">
+                <a href="tel:7903627361" className="hover:text-secondary transition-colors">7903627361</a>
+                <a href="tel:9798302129" className="hover:text-secondary transition-colors">9798302129</a>
+              </div>
             </li>
             <li className="flex gap-2 items-center">
               <Mail className="w-4 h-4 shrink-0 text-secondary" />
-              <a href="mailto:info@apsclasses.com" className="hover:text-secondary transition-colors">info@apsclasses.com</a>
+              <a href="mailto:munnakumar7903627361@gmail.com" className="hover:text-secondary transition-colors">munnakumar7903627361@gmail.com</a>
             </li>
           </ul>
         </div>
