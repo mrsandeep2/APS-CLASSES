@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, GraduationCap } from "lucide-react";
+import { Trophy, GraduationCap, ChevronDown } from "lucide-react";
 
 interface StudentResult {
   id: string;
@@ -130,20 +130,25 @@ const ResultsSection = () => {
         </div>
 
         {/* Year selector */}
-        <div className="flex justify-center gap-2 mb-10 flex-wrap">
-          {years.map(y => (
-            <button
-              key={y}
-              onClick={() => setSelectedYear(y)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                selectedYear === y
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-card border border-border text-muted-foreground hover:bg-muted"
-              }`}
+        <div className="flex justify-center mb-10">
+          <div className="relative w-full max-w-xs sm:max-w-sm group">
+            <label htmlFor="result-year" className="block text-xs font-semibold tracking-wide text-muted-foreground mb-2 text-center uppercase">
+              Select Academic Year
+            </label>
+            <select
+              id="result-year"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full appearance-none rounded-2xl border border-emerald-200/60 bg-gradient-to-r from-emerald-50 via-white to-amber-50 px-4 py-3 pr-12 text-sm font-semibold text-foreground shadow-sm transition-all duration-300 hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 focus:border-emerald-500"
             >
-              {y}
-            </button>
-          ))}
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y === "All" ? "All Years" : y}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-4 top-[41px] h-4 w-4 text-emerald-600 transition-transform duration-300 group-hover:translate-y-0.5" />
+          </div>
         </div>
 
         {/* Student cards */}
