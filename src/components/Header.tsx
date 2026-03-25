@@ -29,17 +29,17 @@ const Header = () => {
       )}
     >
       <div className="container mx-auto flex items-center justify-between py-3 px-4">
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-md">
+        <Link to="/" className="flex items-center gap-2 group min-w-0 flex-1 md:flex-none">
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-md shrink-0">
             <GraduationCap className="w-6 h-6 text-primary-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <span className={cn(
-              "text-lg font-bold font-heading leading-tight block transition-colors",
+              "text-lg font-bold font-heading leading-tight block transition-colors truncate",
               "text-primary-foreground"
             )}>APS Classes</span>
             <span className={cn(
-              "text-xs transition-colors",
+              "text-xs transition-colors truncate block",
               "text-primary-foreground/60"
             )}>By Munna Sir</span>
           </div>
@@ -91,9 +91,9 @@ const Header = () => {
 
         {/* Mobile nav */}
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild className="md:hidden">
+          <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className={cn(
-              "hover:scale-110 active:scale-95 transition-all",
+              "md:hidden shrink-0 ml-2 hover:scale-110 active:scale-95 transition-all",
               "text-primary-foreground"
             )}>
               <Menu className="w-5 h-5" />
