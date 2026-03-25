@@ -10,6 +10,24 @@ import { toast } from "sonner";
 const categories = ["Test", "Cultural", "Academics", "Events"];
 const providedHeroBannerPaths = ["/hero-import/APS-BANNER-1.png", "/hero-import/APS-BANNER-2.png"];
 const TOTAL_RESULT_MARKS = 500;
+const DEFAULT_RESULT_AVATARS = {
+  Male: "/default-avatars/male.svg",
+  Female: "/default-avatars/female.svg",
+} as const;
+type ResultGender = keyof typeof DEFAULT_RESULT_AVATARS;
+
+const getResultGenderFromPhoto = (photoUrl: string | null): ResultGender => {
+  if (photoUrl === DEFAULT_RESULT_AVATARS.Female) return "Female";
+  return "Male";
+};
+
+const isDefaultResultAvatar = (photoUrl: string | null) => {
+  return photoUrl === DEFAULT_RESULT_AVATARS.Male || photoUrl === DEFAULT_RESULT_AVATARS.Female;
+};
+
+const usesAutoResultAvatar = (photoUrl: string | null) => {
+  return !photoUrl || isDefaultResultAvatar(photoUrl);
+};
 
 const getGradeFromPercentage = (percentage: number) => {
   if (percentage >= 90) return "A+";
@@ -284,6 +302,7 @@ const AdminGallery = () => {
   const [rClass, setRClass] = useState("Class 10th");
   const [rMarks, setRMarks] = useState("");
   const [rYear, setRYear] = useState("2024-25");
+  const [rGender, setRGender] = useState<ResultGender>("Male");
   const [rPhotoBlob, setRPhotoBlob] = useState<Blob | null>(null);
   const [rPhotoPreview, setRPhotoPreview] = useState<string>("");
   const [resultPhotoTarget, setResultPhotoTarget] = useState<"add" | "edit">("add");
@@ -292,6 +311,7 @@ const AdminGallery = () => {
   const [editResultClass, setEditResultClass] = useState("Class 10th");
   const [editResultMarks, setEditResultMarks] = useState("");
   const [editResultYear, setEditResultYear] = useState("2024-25");
+  const [editResultGender, setEditResultGender] = useState<ResultGender>("Male");
   const [editResultPhotoBlob, setEditResultPhotoBlob] = useState<Blob | null>(null);
   const [editResultPhotoPreview, setEditResultPhotoPreview] = useState("");
 
@@ -572,6 +592,10 @@ const AdminGallery = () => {
       photoUrl = urlData.publicUrl;
     }
 
+    if (!photoUrl) {
+      photoUrl = DEFAULT_RESULT_AVATARS[rGender];
+    }
+
     const { error } = await (supabase as any).from("student_results").insert({
       student_name: rName.trim(),
       student_class: rClass,
@@ -589,6 +613,7 @@ const AdminGallery = () => {
       toast.success("Result added");
       setRName("");
       setRMarks("");
+      setRGender("Male");
       setRPhotoBlob(null);
       setRPhotoPreview("");
       if (resultPhotoInputRef.current) resultPhotoInputRef.current.value = "";
@@ -650,8 +675,9 @@ const AdminGallery = () => {
     setEditResultClass(result.student_class);
     setEditResultMarks(String(result.marks_obtained));
     setEditResultYear(result.year);
+    setEditResultGender(getResultGenderFromPhoto(result.photo_url));
     setEditResultPhotoBlob(null);
-    setEditResultPhotoPreview(result.photo_url || "");
+    setEditResultPhotoPreview(result.photo_url || DEFAULT_RESULT_AVATARS[getResultGenderFromPhoto(result.photo_url)]);
   };
 
   const cancelEditResult = () => {
@@ -660,6 +686,7 @@ const AdminGallery = () => {
     setEditResultClass("Class 10th");
     setEditResultMarks("");
     setEditResultYear("2024-25");
+    setEditResultGender("Male");
     setEditResultPhotoBlob(null);
     setEditResultPhotoPreview("");
   };
@@ -710,6 +737,10 @@ const AdminGallery = () => {
           await supabase.storage.from("student-results").remove([decodeURIComponent(oldFilePath)]);
         }
       }
+    }
+
+    if (!editResultPhotoBlob && usesAutoResultAvatar(result.photo_url)) {
+      photoUrl = DEFAULT_RESULT_AVATARS[editResultGender];
     }
 
     const { error } = await (supabase as any)
@@ -1299,9 +1330,11 @@ const AdminGallery = () => {
                 {rPhotoPreview ? (
                   <img src={rPhotoPreview} alt="Student preview" className="w-12 h-12 rounded-full object-cover border border-border" />
                 ) : (
-                  <div className="w-12 h-12 rounded-full border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-                    Photo
-                  </div>
+                  <img
+                    src={DEFAULT_RESULT_AVATARS[rGender]}
+                    alt={`${rGender} default avatar`}
+                    className="w-12 h-12 rounded-full object-cover border border-border"
+                  />
                 )}
 
                 <div className="flex-1">
@@ -1317,6 +1350,20 @@ const AdminGallery = () => {
                   />
                 </div>
               </div>
+
+              {!rPhotoBlob && (
+                <div className="mb-3">
+                  <label className="text-xs text-muted-foreground mb-1 block">No photo uploaded: choose gender for default icon</label>
+                  <select
+                    value={rGender}
+                    onChange={(e) => setRGender(e.target.value as ResultGender)}
+                    className="w-full sm:w-60 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+              )}
 
               {(() => {
                 const safeMarks = Math.max(0, Math.min(TOTAL_RESULT_MARKS, Number(rMarks) || 0));
@@ -1426,6 +1473,25 @@ const AdminGallery = () => {
                           className="hidden"
                         />
                       </div>
+
+                      {!editResultPhotoBlob && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Gender</label>
+                            <select
+                              value={editResultGender}
+                              onChange={(e) => setEditResultGender(e.target.value as ResultGender)}
+                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
+                            </select>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Used when no custom photo is uploaded.
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex flex-wrap items-center gap-2">
                         <Button size="sm" onClick={() => handleSaveResultEdit(result)} disabled={uploading}>
