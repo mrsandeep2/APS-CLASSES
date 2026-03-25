@@ -48,7 +48,7 @@ const GallerySection = () => {
   );
 
   return (
-    <section className="py-16 md:py-24 bg-muted/30">
+    <section id="gallery" className="py-16 md:py-24 bg-muted/30 scroll-mt-28">
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
