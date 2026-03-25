@@ -170,7 +170,7 @@ const ResultsSection = () => {
               <div className="pt-4 pb-1.5 flex justify-center">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-amber-300/60 overflow-hidden bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900 dark:to-orange-900 flex items-center justify-center group-hover:border-amber-400 transition-all duration-300 group-hover:scale-105">
                   {s.photo_url ? (
-                    <img src={s.photo_url} alt={s.student_name} className="w-full h-full object-cover" />
+                    <img src={s.photo_url} alt={s.student_name} className="w-full h-full object-cover object-center" />
                   ) : (
                     <GraduationCap className="w-8 h-8 sm:w-10 sm:h-10 text-amber-600" />
                   )}

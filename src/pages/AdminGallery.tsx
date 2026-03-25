@@ -11,10 +11,11 @@ const categories = ["Test", "Cultural", "Academics", "Events"];
 const providedHeroBannerPaths = ["/hero-import/APS-BANNER-1.png", "/hero-import/APS-BANNER-2.png"];
 const TOTAL_RESULT_MARKS = 500;
 const DEFAULT_RESULT_AVATARS = {
-  Male: "/default-avatars/male.svg",
-  Female: "/default-avatars/female.svg",
+  Male: "/default-avatars/male%20avatar.jpg",
+  Female: "/default-avatars/female%20avatar.jpg",
 } as const;
 type ResultGender = keyof typeof DEFAULT_RESULT_AVATARS;
+const LEGACY_DEFAULT_RESULT_AVATARS = ["/default-avatars/male.svg", "/default-avatars/female.svg"];
 
 const getResultGenderFromPhoto = (photoUrl: string | null): ResultGender => {
   if (photoUrl === DEFAULT_RESULT_AVATARS.Female) return "Female";
@@ -22,7 +23,11 @@ const getResultGenderFromPhoto = (photoUrl: string | null): ResultGender => {
 };
 
 const isDefaultResultAvatar = (photoUrl: string | null) => {
-  return photoUrl === DEFAULT_RESULT_AVATARS.Male || photoUrl === DEFAULT_RESULT_AVATARS.Female;
+  return (
+    photoUrl === DEFAULT_RESULT_AVATARS.Male ||
+    photoUrl === DEFAULT_RESULT_AVATARS.Female ||
+    (photoUrl ? LEGACY_DEFAULT_RESULT_AVATARS.includes(photoUrl) : false)
+  );
 };
 
 const usesAutoResultAvatar = (photoUrl: string | null) => {
@@ -1328,12 +1333,12 @@ const AdminGallery = () => {
 
               <div className="mb-3 flex items-center gap-3">
                 {rPhotoPreview ? (
-                  <img src={rPhotoPreview} alt="Student preview" className="w-12 h-12 rounded-full object-cover border border-border" />
+                  <img src={rPhotoPreview} alt="Student preview" className="w-12 h-12 rounded-full object-cover object-center border border-border" />
                 ) : (
                   <img
                     src={DEFAULT_RESULT_AVATARS[rGender]}
                     alt={`${rGender} default avatar`}
-                    className="w-12 h-12 rounded-full object-cover border border-border"
+                    className="w-12 h-12 rounded-full object-cover object-center border border-border"
                   />
                 )}
 
@@ -1456,7 +1461,7 @@ const AdminGallery = () => {
 
                       <div className="flex items-center gap-2">
                         {editResultPhotoPreview ? (
-                          <img src={editResultPhotoPreview} alt="Student preview" className="w-10 h-10 rounded-full object-cover border border-border" />
+                          <img src={editResultPhotoPreview} alt="Student preview" className="w-10 h-10 rounded-full object-cover object-center border border-border" />
                         ) : (
                           <div className="w-10 h-10 rounded-full border border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground">
                             Photo
